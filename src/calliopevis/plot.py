@@ -16,7 +16,7 @@ def fig_static(model_container, variable, carriers, nodes, techs):
         y=variable,
         color="techs" if "techs" in data.columns else None,
         facet_col="carriers" if "carriers" in data.columns else None,
-        color_discrete_map=model_container.colors,
+        color_discrete_map=model_container.colors_techs.param.values(),
     )
     return fig
 
@@ -39,7 +39,7 @@ def fig_timeseries(model_container, variable, carriers, nodes, techs, time_res):
         x="timesteps",
         y=variable,
         color="techs" if "techs" in data.columns else None,
-        color_discrete_map=model_container.colors,
+        color_discrete_map=model_container.colors_techs.param.values(),
     )
 
     # fig.add_scatter(

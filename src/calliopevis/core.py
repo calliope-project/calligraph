@@ -1,56 +1,80 @@
-import collections
 import random
 
 import calliope
 import pandas as pd
+import param
 import xarray as xr
+
+
+class ResettableParam(param.Parameterized):
+    def __init__(self, **params):
+        super().__init__(**params)
+
+    def _reset(self):
+        for param_ in self.param:
+            if param_ not in ["name", "reset"]:
+                setattr(self, param_, self.param[param_].default)
+
+    reset = param.Action(_reset, label="Reset")
 
 
 class ModelContainer:
     def __init__(self, path):
-        self.model = m = calliope.read_netcdf(path)
+        self.model = calliope.read_netcdf(path)
+        self.colors_techs = self._init_tech_colors()
+        self.variables = self._init_variables()
 
-        # Generates a random hex color if a dict key doesn't exist
-        self.colors = collections.defaultdict(
-            lambda: "#" + random.randbytes(3).hex(),
-            m.inputs.color.to_series().to_dict(),
-        )
-
-        self.indices = dict(
-            carriers=sorted(m.results.carriers.to_index().to_list()),
-            nodes=sorted(m.results.nodes.to_index().to_list()),
-            techs=sorted(m.results.techs.to_index().to_list()),
-            techs_transmission=sorted(
-                m.inputs.base_tech.where(
-                    m.inputs.base_tech.isin("transmission"), drop=True
-                )
-                .techs.to_index()
-                .to_list()
-            ),
-            techs_no_transmission=sorted(
-                m.inputs.base_tech.where(
-                    ~m.inputs.base_tech.isin("transmission"), drop=True
-                )
-                .techs.to_index()
-                .to_list()
-            ),
-            variables=sorted(list(m.results.data_vars)),
+    def _init_variables(self):
+        variables = dict(
+            variables=sorted(list(self.model.results.data_vars)),
             variables_timesteps=sorted(
                 [
                     var
-                    for var in m.results.data_vars
-                    if "timesteps" in m.results[var].dims
+                    for var in self.model.results.data_vars
+                    if "timesteps" in self.model.results[var].dims
                 ]
                 + ["flow*"]
             ),
             variables_notimesteps=sorted(
                 [
                     var
-                    for var in m.results.data_vars
-                    if "timesteps" not in m.results[var].dims
+                    for var in self.model.results.data_vars
+                    if "timesteps" not in self.model.results[var].dims
                 ]
             ),
-            costs=sorted(m.results.costs.to_index().to_list()),
+        )
+        return variables
+
+    def _init_tech_colors(self):
+        techs = self.model.results.techs.to_index().to_list()
+        colors = self.model.inputs.color.to_series().to_dict()
+        all_colors = {
+            tech: colors.get(tech, "#" + random.randbytes(3).hex()) for tech in techs
+        }
+        colors_techs = ResettableParam()
+        for k, v in all_colors.items():
+            colors_techs.param.add_parameter(k, param.Color(v))
+        return colors_techs
+
+    def get_base_tech_members(self, base_tech):
+        return sorted(
+            self.model.inputs.base_tech.where(
+                self.model.inputs.base_tech.isin(base_tech), drop=True
+            )
+            .techs.to_index()
+            .to_list()
+        )
+
+    def get_model_coords(self, ignore=["timesteps", "techs"]):
+        coords = list(self.model.results.coords)
+        if ignore:
+            coords = set(coords) - set(ignore)
+        return coords
+
+    def get_grouped_transmission_techs(self, grouping_param):
+        groups = self.model.inputs[grouping_param]
+        transmission_techs = (
+            self.model.results.coords["transmission"].to_index().to_list()
         )
 
 

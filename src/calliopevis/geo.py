@@ -68,12 +68,8 @@ def get_line_xs_ys(model, as_mercator=False):
     return links
 
 
-def get_geo_node_data(model, indices, variable):
-    df = (
-        model.results[variable]
-        .sel(techs=indices["techs_no_transmission"])
-        .to_dataframe()
-    )
+def get_geo_node_data(model, techs, variable):
+    df = model.results[variable].sel(techs=techs).to_dataframe()
     columns = list(df.index.names)
     columns.remove("nodes")
     df = df.pivot_table(index="nodes", columns=columns)
@@ -83,8 +79,8 @@ def get_geo_node_data(model, indices, variable):
     return df
 
 
-def get_geo_link_data(model, indices, variable):
-    df = model.results[variable].sel(techs=indices["techs_transmission"]).to_dataframe()
+def get_geo_link_data(model, techs, variable):
+    df = model.results[variable].sel(techs=techs).to_dataframe()
     columns = list(df.index.names)
     columns.remove("techs")
 
@@ -98,11 +94,20 @@ def get_geo_link_data(model, indices, variable):
     return df
 
 
-def plot_map(model_container, node_variable, link_variable):
-    model = model_container.model
-    indices = model_container.indices
-    df_nodes = get_geo_node_data(model, indices, node_variable)
-    df_links = get_geo_link_data(model, indices, link_variable)
+def plot_map(ui_view, node_variable, link_variable):
+    model = ui_view.model_container.model
+    techs_no_transmission = [
+        i
+        for i in ui_view.coord_selectors["techs"].value
+        if ui_view.model_container.model.inputs.base_tech.loc[i].data != "transmission"
+    ]
+    techs_transmission = [
+        i
+        for i in ui_view.coord_selectors["techs"].value
+        if ui_view.model_container.model.inputs.base_tech.loc[i].data == "transmission"
+    ]
+    df_nodes = get_geo_node_data(model, techs_no_transmission, node_variable)
+    df_links = get_geo_link_data(model, techs_transmission, link_variable)
 
     src_nodes = ColumnDataSource(df_nodes)
     src_links = ColumnDataSource(df_links)
