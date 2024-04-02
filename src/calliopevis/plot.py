@@ -3,8 +3,8 @@ import plotly.express as px
 from calliopevis.core import get_df_static, get_df_timeseries
 
 
-def fig_static(model_container, variable, carriers, nodes, techs):
-    data = get_df_static(model_container, variable, carriers, nodes, techs)
+def fig_static(model_container, variable, **selectors):
+    data = get_df_static(model_container, variable, selectors)
 
     fig = px.bar(
         data,
@@ -21,16 +21,14 @@ def fig_static(model_container, variable, carriers, nodes, techs):
     return fig
 
 
-def fig_timeseries(model_container, variable, carriers, nodes, techs, time_res):
+def fig_timeseries(model_container, variable, time_res, **selectors):
 
     RESOLUTIONS = {"Monthly": "1M", "Daily": "1D"}
 
     data = get_df_timeseries(
         model_container,
         variable,
-        carriers,
-        nodes,
-        techs,
+        selectors=selectors,
         resample=RESOLUTIONS.get(time_res, None),
     )
 

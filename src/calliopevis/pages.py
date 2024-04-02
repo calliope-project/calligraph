@@ -37,9 +37,7 @@ def page_pernodetech(ui_view):
         calliopevis.plot.fig_static,
         model_container=model_container,
         variable=widget_variable_pernodetech,
-        carriers=ui_view.coord_selectors["carriers"],
-        nodes=ui_view.coord_selectors["nodes"],
-        techs=ui_view.coord_selectors["techs"],
+        **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
     )
     return pn.Column(
         widget_variable_pernodetech,
@@ -62,10 +60,8 @@ def page_timeseries(ui_view):
         calliopevis.plot.fig_timeseries,
         model_container=model_container,
         variable=widget_variable_ts,
-        carriers=ui_view.coord_selectors["carriers"],
-        nodes=ui_view.coord_selectors["nodes"],
-        techs=ui_view.coord_selectors["techs"],
         time_res=btn_time_res,
+        **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
     )
 
     return pn.Column(
@@ -80,26 +76,55 @@ def page_map(ui_view):
     widget_variable_map_nodes = pn.widgets.Select(
         name="Variable (nodes)",
         value="flow_cap",
-        options=model_container.variables["variables_notimesteps"],
+        options=model_container.variables["variables_notimesteps_nodes"],
     )
     widget_variable_map_links = pn.widgets.Select(
         name="Variable (links)",
         value="flow_cap",
-        options=model_container.variables["variables_notimesteps"],
+        options=model_container.variables["variables_notimesteps_links"],
     )
-    sel_map_tech = pn.widgets.Select(
-        name="Tech to show", value="", options=ui_view.coord_selectors["techs"].value
-    )
+
+    map_plot = calliopevis.geo.MapPlot(ui_view)
+
     plot_pane = pn.bind(
-        calliopevis.geo.plot_map,
+        map_plot.plot,
         ui_view=ui_view,
         node_variable=widget_variable_map_nodes,
         link_variable=widget_variable_map_links,
+        **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
     )
 
-    return pn.Column(
-        widget_variable_map_nodes, widget_variable_map_links, sel_map_tech, plot_pane
+    btn_time_res = pn.widgets.RadioButtonGroup(
+        options=["Monthly", "Daily", "Original resolution"], value="Monthly"
     )
+
+    plot_timeseries_pane = pn.bind(
+        calliopevis.plot.fig_timeseries,
+        model_container=model_container,
+        variable="flow_out",  # FIXME: selector for timeseries variables
+        time_res=btn_time_res,
+        **{
+            i: ui_view.coord_selectors[i] for i in ui_view.filter_coords if i != "nodes"
+        },
+        nodes=map_plot.selected_nodes,
+    )
+
+    plot_static_pane = pn.bind(
+        calliopevis.plot.fig_static,
+        model_container=model_container,
+        variable=widget_variable_map_nodes,
+        **{
+            i: ui_view.coord_selectors[i] for i in ui_view.filter_coords if i != "nodes"
+        },
+        nodes=map_plot.selected_nodes,
+    )
+
+    map_side_plots = pn.Column(btn_time_res, plot_timeseries_pane, plot_static_pane)
+
+    return [
+        pn.Column(widget_variable_map_nodes, widget_variable_map_links, plot_pane),
+        pn.Column(map_side_plots),
+    ]
 
 
 def page_table(ui_view):
@@ -116,12 +141,10 @@ def page_table(ui_view):
         model_container=model_container,
         dropna=switch_dropna,
         variable=widget_variable_export,
-        carriers=ui_view.coord_selectors["carriers"],
-        nodes=ui_view.coord_selectors["nodes"],
-        techs=ui_view.coord_selectors["techs"],
+        **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
     )
 
     return pn.Column(
-        pn.Row(widget_variable_export, switch_dropna),
+        pn.Row(widget_variable_export, "Drop N/A values?", switch_dropna),
         pn.pane.Perspective(df, sizing_mode="stretch_both"),
     )

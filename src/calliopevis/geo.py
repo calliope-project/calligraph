@@ -1,9 +1,12 @@
 import calliope
 import pandas as pd
+import panel as pn
 import xyzservices.providers as xyz
-from bokeh.models import ColumnDataSource, HoverTool
+from bokeh.models import ColumnDataSource, HoverTool, TapTool
 from bokeh.plotting import figure
 from pyproj import Transformer
+
+from calliopevis.core import filter_selectors
 
 # Transform from Web Mercator to Lat/Lon
 MERCATOR_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326")
@@ -24,8 +27,13 @@ def get_geo_bounds(model: calliope.Model, as_mercator=False, padding=0):
         return bounds
 
 
-def get_nodes_geo(model, as_mercator=False):
-    nodes = model._model_data[["nodes", "longitude", "latitude"]].to_dataframe()
+def get_nodes_geo(model, as_mercator=False, selectors=None):
+    nodes = model._model_data[["nodes", "longitude", "latitude"]]
+
+    if selectors:
+        nodes = nodes.sel(filter_selectors(nodes, selectors))
+
+    nodes = nodes.to_dataframe()
     if as_mercator:
         return nodes.apply(
             lambda x: LATLON_TO_MERCATOR.transform(x["latitude"], x["longitude"]),
@@ -36,113 +44,185 @@ def get_nodes_geo(model, as_mercator=False):
         return nodes
 
 
-def get_links_geo(model):
+def get_links_geo(model, nodes, selectors=None):
     df = pd.DataFrame(
         {
             k: {"node_from": v["from"], "node_to": v["to"]}
             for k, v in model._model_def_dict["techs"].items()
-            if "from" in v
+            if "from" in v and v["from"] in nodes.index and v["to"] in nodes.index
         }
     ).T
+    if selectors is not None and "techs" in selectors:
+        df = df.loc[[i for i in selectors["techs"] if i in df.index], :]
     return df
 
 
-def get_line_xs_ys(model, as_mercator=False):
-    nodes = get_nodes_geo(model, as_mercator=as_mercator)
-    links = get_links_geo(model)
-    for link in links.index:
-        node_from = links.loc[link, "node_from"]
-        node_to = links.loc[link, "node_to"]
-        links.loc[link, "lon_from"], links.loc[link, "lon_to"] = (
-            nodes.loc[node_from, "longitude"],
-            nodes.loc[node_to, "longitude"],
-        )
-        links.loc[link, "lat_from"], links.loc[link, "lat_to"] = (
-            nodes.loc[node_from, "latitude"],
-            nodes.loc[node_to, "latitude"],
-        )
+def get_line_xs_ys(model, as_mercator=False, selectors=None):
+    nodes = get_nodes_geo(model, as_mercator=as_mercator, selectors=selectors)
+    links = get_links_geo(model, nodes=nodes, selectors=selectors)
 
-    links["xs"] = links.apply(lambda x: x[["lon_from", "lon_to"]].to_list(), axis=1)
-    links["ys"] = links.apply(lambda x: x[["lat_from", "lat_to"]].to_list(), axis=1)
+    if len(links) > 0:
+        for link in links.index:
+            node_from = links.loc[link, "node_from"]
+            node_to = links.loc[link, "node_to"]
+            links.loc[link, "lon_from"], links.loc[link, "lon_to"] = (
+                nodes.loc[node_from, "longitude"],
+                nodes.loc[node_to, "longitude"],
+            )
+            links.loc[link, "lat_from"], links.loc[link, "lat_to"] = (
+                nodes.loc[node_from, "latitude"],
+                nodes.loc[node_to, "latitude"],
+            )
+
+        links["xs"] = links.apply(lambda x: x[["lon_from", "lon_to"]].to_list(), axis=1)
+        links["ys"] = links.apply(lambda x: x[["lat_from", "lat_to"]].to_list(), axis=1)
 
     return links
 
 
-def get_geo_node_data(model, techs, variable):
-    df = model.results[variable].sel(techs=techs).to_dataframe()
+def get_geo_node_data(model, techs, variable, selectors):
+    da = model._model_data[variable]
+    df = da.sel(
+        filter_selectors(da, selectors, additional_subset={"techs": techs})
+    ).to_dataframe()
     columns = list(df.index.names)
     columns.remove("nodes")
     df = df.pivot_table(index="nodes", columns=columns)
+    df[*["html"] * len(df.columns.names)] = df.apply(
+        lambda row: row.dropna().to_frame().to_html(), axis=1
+    )
     df.columns = df.T.index.droplevel().to_flat_index()
     df.columns = ["__".join(i) for i in df.columns]
-    df = get_nodes_geo(model, as_mercator=True).join(df)
+    df = get_nodes_geo(model, as_mercator=True, selectors=selectors).join(df)
     return df
 
 
-def get_geo_link_data(model, techs, variable):
-    df = model.results[variable].sel(techs=techs).to_dataframe()
+def get_geo_link_data(model, techs, variable, selectors):
+    da = model._model_data[variable]
+    df = da.sel(
+        filter_selectors(da, selectors, additional_subset={"techs": techs})
+    ).to_dataframe()
     columns = list(df.index.names)
     columns.remove("techs")
 
     df = df.pivot_table(index="techs", columns=columns)
+    df[*["html"] * len(df.columns.names)] = df.apply(
+        lambda row: row.dropna().to_frame().to_html(), axis=1
+    )
+    df.columns = df.T.index.droplevel().to_flat_index()
+    df.columns = ["__".join(i) for i in df.columns]
 
-    df = df.apply(
-        lambda x: x.dropna().to_string().strip("nodes carriers"), axis=1
-    ).to_frame("data")
+    df = get_line_xs_ys(model, as_mercator=True, selectors=selectors).join(df)
 
-    df = get_line_xs_ys(model, as_mercator=True).join(df)
+    df["color"] = model.inputs.color.sel(techs=df.index)
+
     return df
 
 
-def plot_map(ui_view, node_variable, link_variable):
-    model = ui_view.model_container.model
-    techs_no_transmission = [
-        i
-        for i in ui_view.coord_selectors["techs"].value
-        if ui_view.model_container.model.inputs.base_tech.loc[i].data != "transmission"
-    ]
-    techs_transmission = [
-        i
-        for i in ui_view.coord_selectors["techs"].value
-        if ui_view.model_container.model.inputs.base_tech.loc[i].data == "transmission"
-    ]
-    df_nodes = get_geo_node_data(model, techs_no_transmission, node_variable)
-    df_links = get_geo_link_data(model, techs_transmission, link_variable)
+class MapPlot:
+    def __init__(self, ui_view):
+        self.ui_view = ui_view
+        self.df_nodes = None
+        self.df_links = None
+        self.selected_nodes = pn.widgets.MultiChoice(
+            value=ui_view.coord_selectors["nodes"].value,
+            options=ui_view.coord_selectors["nodes"].value,
+        )
 
-    src_nodes = ColumnDataSource(df_nodes)
-    src_links = ColumnDataSource(df_links)
+    def nodes_indices_change(self, attr, old, new):
+        if len(new) > 0:
+            self.selected_nodes.value = self.df_nodes.iloc[new].index.to_list()
+        else:
+            self.selected_nodes.value = self.ui_view.coord_selectors["nodes"].value
 
-    bounds = get_geo_bounds(model, as_mercator=True, padding=0.01)
+    def plot(self, ui_view, node_variable, link_variable, **selectors):
+        model = ui_view.model_container.model
+        techs_no_transmission = [
+            i
+            for i in ui_view.coord_selectors["techs"].value
+            if ui_view.model_container.model.inputs.base_tech.loc[i].data
+            != "transmission"
+        ]
+        techs_transmission = [
+            i
+            for i in ui_view.coord_selectors["techs"].value
+            if ui_view.model_container.model.inputs.base_tech.loc[i].data
+            == "transmission"
+        ]
+        self.df_nodes = get_geo_node_data(
+            model, techs_no_transmission, node_variable, selectors
+        )
+        self.df_links = get_geo_link_data(
+            model, techs_transmission, link_variable, selectors
+        )
 
-    tooltips_nodes = [("node", "@nodes")] + [
-        (i.replace("__", " (") + ")", f"@{i}") for i in df_nodes.columns if "__" in i
-    ]
+        # df_nodes["html"] = df_nodes.apply(
+        #     lambda row: row.dropna().to_frame().to_html(), axis=1
+        # )
 
-    tooltips_links = [("from", "@node_from"), ("to", "@node_to"), ("data", "@data")]
+        src_nodes = ColumnDataSource(self.df_nodes)
+        src_links = ColumnDataSource(self.df_links)
 
-    # Range bounds must be supplied in web mercator coordinates
-    p = figure(
-        x_range=bounds.loc["longitude", :].to_list(),
-        y_range=bounds.loc["latitude", :].to_list(),
-        x_axis_type="mercator",
-        y_axis_type="mercator",
-        sizing_mode="scale_both",
-    )
+        bounds = get_geo_bounds(model, as_mercator=True, padding=0.01)
 
-    p.add_tile(xyz.Stadia.StamenTonerLite, retina=True)
-    # p.add_tile(xyz.Stadia.AlidadeSmooth, retina=True)
+        # tooltips_nodes = [("node", "@nodes")] + [
+        #     (i.replace("__", " (") + ")", f"@{i}") for i in df_nodes.columns if "__" in i
+        # ]
 
-    p1 = p.scatter(
-        x="longitude",
-        y="latitude",
-        size=15,
-        fill_color="red",
-        fill_alpha=0.8,
-        source=src_nodes,
-    )
-    p.add_tools(HoverTool(renderers=[p1], tooltips=tooltips_nodes, toggleable=False))
+        tooltips_nodes = "<div>@html__html</div>"
 
-    p2 = p.multi_line(xs="xs", ys="ys", line_width=3, source=src_links)
-    p.add_tools(HoverTool(renderers=[p2], tooltips=tooltips_links, toggleable=False))
+        # tooltips_links = [("from", "@node_from"), ("to", "@node_to"), ("data", "@data")]
+        tooltips_links = "<div>@node_from → @node_to</div><div>@html__html</div>"
 
-    return p
+        # Range bounds must be supplied in web mercator coordinates
+        p = figure(
+            x_range=bounds.loc["longitude", :].to_list(),
+            y_range=bounds.loc["latitude", :].to_list(),
+            x_axis_type="mercator",
+            y_axis_type="mercator",
+            sizing_mode="scale_both",
+        )
+
+        p.add_tile(xyz.Stadia.StamenTonerLite, retina=True)
+        # p.add_tile(xyz.Stadia.AlidadeSmooth, retina=True)
+
+        p1 = p.scatter(
+            x="longitude",
+            y="latitude",
+            size=15,
+            fill_color="#0072b5",
+            line_color="#0072b5",
+            fill_alpha=0.8,
+            source=src_nodes,
+        )
+        p.add_tools(
+            HoverTool(
+                renderers=[p1],
+                tooltips=tooltips_nodes,
+                visible=True,
+                description="Hover info on nodes",
+            )
+        )
+        p.add_tools(TapTool(renderers=[p1]))
+        src_nodes.selected.on_change("indices", self.nodes_indices_change)
+
+        p2 = p.multi_line(
+            xs="xs",
+            ys="ys",
+            line_width=3,
+            line_color="color",
+            line_alpha=0.8,
+            hover_line_color="color",
+            hover_line_alpha=0.5,
+            source=src_links,
+        )
+        p.add_tools(
+            HoverTool(
+                renderers=[p2],
+                tooltips=tooltips_links,
+                visible=True,
+                description="Hover info on links",
+            )
+        )
+
+        return p

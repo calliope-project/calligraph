@@ -1,4 +1,6 @@
 import random
+from pathlib import Path
+from typing import Dict, List
 
 import calliope
 import pandas as pd
@@ -19,34 +21,62 @@ class ResettableParam(param.Parameterized):
 
 
 class ModelContainer:
-    def __init__(self, path):
+    def __init__(self, path: str | Path):
+        """
+        Returns a new ModelContainer from the given `path` to a Calliope NetCDF file.
+
+        Args:
+            path (str | Path)
+        """
         self.model = calliope.read_netcdf(path)
         self.colors_techs = self._init_tech_colors()
-        self.variables = self._init_variables()
+        self.update_variables()
 
-    def _init_variables(self):
+    def update_variables(self, include_inputs=True) -> None:
+        """
+        Updates `self.variables` with a dictionary with variable kind as keys,
+        lists of variables as values.
+
+        """
+        if include_inputs:
+            dataset = self.model._model_data
+        else:
+            dataset = self.model.results
+
         variables = dict(
-            variables=sorted(list(self.model.results.data_vars)),
+            variables=sorted(list(dataset.data_vars)),
             variables_timesteps=sorted(
-                [
-                    var
-                    for var in self.model.results.data_vars
-                    if "timesteps" in self.model.results[var].dims
-                ]
+                [var for var in dataset.data_vars if "timesteps" in dataset[var].dims]
                 + ["flow*"]
             ),
             variables_notimesteps=sorted(
                 [
                     var
-                    for var in self.model.results.data_vars
-                    if "timesteps" not in self.model.results[var].dims
+                    for var in dataset.data_vars
+                    if "timesteps" not in dataset[var].dims
+                ]
+            ),
+            variables_notimesteps_nodes=sorted(
+                [
+                    var
+                    for var in dataset.data_vars
+                    if "timesteps" not in dataset[var].dims
+                    and "nodes" in dataset[var].dims
+                ]
+            ),
+            variables_notimesteps_links=sorted(
+                [
+                    var
+                    for var in dataset.data_vars
+                    if "timesteps" not in dataset[var].dims
+                    and "nodes" in dataset[var].dims  # FIXME
                 ]
             ),
         )
-        return variables
+        self.variables = variables
 
     def _init_tech_colors(self):
-        techs = self.model.results.techs.to_index().to_list()
+        techs = self.model._model_data.techs.to_index().to_list()
         colors = self.model.inputs.color.to_series().to_dict()
         all_colors = {
             tech: colors.get(tech, "#" + random.randbytes(3).hex()) for tech in techs
@@ -66,7 +96,7 @@ class ModelContainer:
         )
 
     def get_model_coords(self, ignore=["timesteps", "techs"]):
-        coords = list(self.model.results.coords)
+        coords = list(self.model._model_data.coords)
         if ignore:
             coords = set(coords) - set(ignore)
         return coords
@@ -74,25 +104,44 @@ class ModelContainer:
     def get_grouped_transmission_techs(self, grouping_param):
         groups = self.model.inputs[grouping_param]
         transmission_techs = (
-            self.model.results.coords["transmission"].to_index().to_list()
+            self.model._model_data.coords["transmission"].to_index().to_list()
         )
 
 
-def clean_selector(da: xr.DataArray, carriers: list, nodes: list, techs: list) -> dict:
+def filter_selectors(
+    da: xr.DataArray, selectors: Dict[str, List[str]], additional_subset: Dict = None
+) -> Dict[str, List[str]]:
 
-    selector = dict(carriers=carriers, nodes=nodes, techs=techs)
+    for k, v in selectors.items():
+        assert isinstance(v, list)
+
+    # Work on a copy so we don't touch the passed-in data
+    # import copy
+    # selectors = copy.deepcopy(selectors)
 
     selector_keys_to_delete = [
-        k for k in selector.keys() if k not in da.dims or selector[k] is None
+        k for k in selectors.keys() if k not in da.dims or selectors[k] is None
     ]
-    for k in selector_keys_to_delete:
-        del selector[k]
+    selectors = {k: v for k, v in selectors.items() if k not in selector_keys_to_delete}
 
-    return selector
+    if additional_subset:
+        for k, v in additional_subset.items():
+            if k in selectors:
+                selectors[k] = [i for i in v if i in selectors[k]]
+            else:
+                selectors[k] = v
+
+    return selectors
+
+
+def _clean_df(df):
+    df.columns = ["Value"]
+    df.index.name = None
+    return df
 
 
 def get_model_summary_df(model_container):
-    results = model_container.model.results
+    results = model_container.model._model_data
     data = [
         ("Model name", results.attrs["name"]),
         ("Scenario name", results.attrs["scenario"]),
@@ -105,30 +154,31 @@ def get_model_summary_df(model_container):
         ("Applied additional math", results.attrs["applied_additional_math"]),
         ("Termination condition", results.attrs["termination_condition"]),
     ]
-    return pd.DataFrame(data, columns=["Property", "Value"]).set_index("Property")
+    df = pd.DataFrame(data).set_index(0)
+    return _clean_df(df)
 
 
 def get_build_config_df(model_container):
-    results = model_container.model.results
-    return pd.DataFrame.from_dict(results.attrs["config"]["build"], orient="index")[0]
+    results = model_container.model._model_data
+    df = pd.DataFrame.from_dict(results.attrs["config"]["build"], orient="index")
+    return _clean_df(df)
 
 
 def get_solve_config_df(model_container):
-    results = model_container.model.results
-    return pd.DataFrame.from_dict(results.attrs["config"]["solve"], orient="index")[0]
+    results = model_container.model._model_data
+    df = pd.DataFrame.from_dict(results.attrs["config"]["solve"], orient="index")
+    return _clean_df(df)
 
 
-def get_df_static(model_container, variable, carriers=None, nodes=None, techs=None):
-    # da = model.results.flow_cap.where(
+def get_df_static(model_container, variable, selectors):
+    # da = model._model_data.flow_cap.where(
     #         ~model.inputs.base_tech.str.contains("demand|transmission")
     #     )
 
-    da = model_container.model.results[variable]
-
-    selector = clean_selector(da, carriers, nodes, techs)
+    da = model_container.model._model_data[variable]
 
     df_capacity = (
-        da.sel(selector)
+        da.sel(filter_selectors(da, selectors))
         .to_series()
         .where(lambda x: x != 0)
         .dropna()
@@ -138,20 +188,16 @@ def get_df_static(model_container, variable, carriers=None, nodes=None, techs=No
     return df_capacity
 
 
-def get_df_timeseries(
-    model_container, variable, carriers=None, nodes=None, techs=None, resample=None
-):
-    results = model_container.model.results
+def get_df_timeseries(model_container, variable, selectors, resample=None):
+    results = model_container.model._model_data
 
     if variable == "flow*":
         da = results.flow_out.fillna(0) - results.flow_in.fillna(0)
     else:
         da = results[variable]
 
-    selector = clean_selector(da, carriers, nodes, techs)
-
     df = (
-        da.sel(selector)
+        da.sel(filter_selectors(da, selectors))
         .sum("nodes")
         .to_series()
         .where(lambda x: x != 0)
@@ -173,15 +219,11 @@ def get_df_timeseries(
     return df.reset_index()
 
 
-def get_generic_df(
-    model_container, variable, dropna=False, carriers=None, nodes=None, techs=None
-):
+def get_generic_df(model_container, variable, dropna=False, **selectors):
 
-    da = model_container.model.results[variable]
+    da = model_container.model._model_data[variable]
 
-    selector = clean_selector(da, carriers, nodes, techs)
-
-    df = da.sel(selector).to_dataframe()
+    df = da.sel(filter_selectors(da, selectors)).to_dataframe()
     if dropna:
         df = df.dropna()
 
