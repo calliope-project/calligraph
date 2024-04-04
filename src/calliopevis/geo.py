@@ -157,22 +157,12 @@ class MapPlot:
             model, techs_transmission, link_variable, selectors
         )
 
-        # df_nodes["html"] = df_nodes.apply(
-        #     lambda row: row.dropna().to_frame().to_html(), axis=1
-        # )
-
         src_nodes = ColumnDataSource(self.df_nodes)
         src_links = ColumnDataSource(self.df_links)
 
         bounds = get_geo_bounds(model, as_mercator=True)
 
-        # tooltips_nodes = [("node", "@nodes")] + [
-        #     (i.replace("__", " (") + ")", f"@{i}") for i in df_nodes.columns if "__" in i
-        # ]
-
         tooltips_nodes = "<div>@html__html</div>"
-
-        # tooltips_links = [("from", "@node_from"), ("to", "@node_to"), ("data", "@data")]
         tooltips_links = "<div>@node_from → @node_to</div><div>@html__html</div>"
 
         # Range bounds must be supplied in web mercator coordinates
@@ -185,7 +175,6 @@ class MapPlot:
         )
 
         p.add_tile(xyz.Stadia.StamenTonerLite, retina=True)
-        # p.add_tile(xyz.Stadia.AlidadeSmooth, retina=True)
 
         p1 = p.scatter(
             x="longitude",

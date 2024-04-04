@@ -1,9 +1,7 @@
 import itertools
 
 import panel as pn
-
-# from panel.template import EditableTemplate as Template
-from panel.template import BootstrapTemplate as Template
+from panel.template import BootstrapTemplate
 
 from calliopevis import pages
 from calliopevis.core import ModelContainer
@@ -32,7 +30,8 @@ class UIView:
         self._resettable_widgets_defaults = {}
 
     def __get_transmission_groups(self, group_param=""):
-        # FIXME this function can easily return nonsense depending on what `group_param` is passed in
+        # FIXME this function can easily return nonsense depending on
+        # what `group_param` is passed in
         transmission_techs = self.coord_selectors["techs_transmission"].options
         model = self.model_container.model
 
@@ -262,7 +261,7 @@ class UIView:
         return pn.Column()
 
     def _init_view(self):
-        view = Template(
+        view = BootstrapTemplate(
             title=self.model_container.model._model_data.attrs["name"],
             header=[self.view_navbar],
             sidebar=[self.view_coord_selectors],
@@ -284,7 +283,7 @@ class UIView:
         pn.bind(
             self.reset_widget,
             id=id,
-            switch_inputs=self.switch_inputs,  # Dummy argumenet
+            switch_inputs=self.switch_inputs,  # Dummy argument
             watch=True,
         )
 

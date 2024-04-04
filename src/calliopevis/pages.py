@@ -4,15 +4,10 @@ import calliopevis.core as core
 import calliopevis.geo
 import calliopevis.plot
 
-HOME_WARNING = """### Warning: Pre-release software
-
-This is alpha/pre-release software. It is likely to break in unexpected ways! Please report issues and bugs."""
-
 
 def page_home(ui_view):
     model_container = ui_view.model_container
     return pn.Column(
-        pn.pane.Alert(HOME_WARNING, alert_type="warning"),
         pn.Row(
             pn.Column(
                 pn.pane.DataFrame(core.get_model_summary_df(model_container)),
@@ -22,7 +17,7 @@ def page_home(ui_view):
                 pn.pane.DataFrame(core.get_solve_config_df(model_container)),
             ),
             pn.Column(pn.Param(model_container.colors_techs, name="Tech colors")),
-        ),
+        )
     )
 
 
