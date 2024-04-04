@@ -28,10 +28,11 @@ def page_home(ui_view):
 
 def page_pernodetech(ui_view):
     model_container = ui_view.model_container
-    widget_variable_pernodetech = pn.widgets.Select(
+    widget_variable_pernodetech = ui_view.initialise_resettable_widget(
+        id="variable_pernodetech",
         name="Variable",
         value="flow_cap",
-        options=model_container.variables["variables_notimesteps"],
+        variables="variables_notimesteps",
     )
     plot_pane = pn.bind(
         calliopevis.plot.fig_static,
@@ -50,10 +51,11 @@ def page_timeseries(ui_view):
     btn_time_res = pn.widgets.RadioButtonGroup(
         options=["Monthly", "Daily", "Original resolution"], value="Monthly"
     )
-    widget_variable_ts = pn.widgets.Select(
+    widget_variable_ts = ui_view.initialise_resettable_widget(
+        id="variable_ts",
         name="Variable",
         value="flow*",
-        options=model_container.variables["variables_timesteps"],
+        variables="variables_timesteps",
     )
 
     plot_pane = pn.bind(
@@ -73,15 +75,17 @@ def page_timeseries(ui_view):
 
 def page_map(ui_view):
     model_container = ui_view.model_container
-    widget_variable_map_nodes = pn.widgets.Select(
+    widget_variable_map_nodes = ui_view.initialise_resettable_widget(
+        id="variable_map_nodes",
         name="Variable (nodes)",
         value="flow_cap",
-        options=model_container.variables["variables_notimesteps_nodes"],
+        variables="variables_notimesteps_nodes",
     )
-    widget_variable_map_links = pn.widgets.Select(
+    widget_variable_map_links = ui_view.initialise_resettable_widget(
+        id="variable_map_links",
         name="Variable (links)",
         value="flow_cap",
-        options=model_container.variables["variables_notimesteps_links"],
+        variables="variables_notimesteps_links",
     )
 
     map_plot = calliopevis.geo.MapPlot(ui_view)
@@ -129,11 +133,11 @@ def page_map(ui_view):
 
 def page_table(ui_view):
     model_container = ui_view.model_container
-    widget_variable_export = pn.widgets.Select(
-        name="Variable",
-        value="flow_cap",
-        options=model_container.variables["variables"],
+
+    widget_variable_export = ui_view.initialise_resettable_widget(
+        id="variable_export", name="Variable", value="flow_cap", variables="variables"
     )
+
     switch_dropna = pn.widgets.Switch(value=True, name="Drop N/A")
 
     df = pn.bind(

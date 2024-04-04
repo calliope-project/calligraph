@@ -28,6 +28,8 @@ class UIView:
         self.view_navbar = self._init_navbar()
         self.view = self._init_view()
         self.switch_page(list(self.pages.keys())[0])
+        self._resettable_widgets = {}
+        self._resettable_widgets_defaults = {}
 
     def __get_transmission_groups(self, group_param=""):
         # FIXME this function can easily return nonsense depending on what `group_param` is passed in
@@ -211,7 +213,9 @@ class UIView:
             coord_selectors.append(self._coord_selector(coord))
 
         # Toggle for including inputs
-        switch_inputs = pn.widgets.Switch(value=True, name="Include inputs")
+        self.switch_inputs = switch_inputs = pn.widgets.Switch(
+            value=True, name="Include inputs"
+        )
         row_switch_inputs = pn.Row("Include input variables", switch_inputs)
 
         pn.bind(
@@ -267,6 +271,28 @@ class UIView:
         view.main.append(pn.Column())  # Column 0
         view.main.append(pn.Column())  # Column 1
         return view
+
+    def initialise_resettable_widget(
+        self, id, name="Variable", variables="variables", value="flow_cap"
+    ):
+        widget = pn.widgets.Select(
+            name=name, value=value, options=self.model_container.variables[variables]
+        )
+        self._resettable_widgets[id] = widget
+        self._resettable_widgets_defaults[id] = variables
+
+        pn.bind(
+            self.reset_widget,
+            id=id,
+            switch_inputs=self.switch_inputs,  # Dummy argumenet
+            watch=True,
+        )
+
+        return widget
+
+    def reset_widget(self, id, *args, **kwargs):
+        variables = self._resettable_widgets_defaults[id]
+        self._resettable_widgets[id].options = self.model_container.variables[variables]
 
 
 def app(path):
