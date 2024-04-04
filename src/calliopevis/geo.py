@@ -13,12 +13,13 @@ MERCATOR_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326")
 LATLON_TO_MERCATOR = Transformer.from_crs("EPSG:4326", "EPSG:3857")
 
 
-def get_geo_bounds(model: calliope.Model, as_mercator=False, padding=0):
+def get_geo_bounds(model: calliope.Model, as_mercator=False, padding=0.1):
     df = get_nodes_geo(model, as_mercator=False)
     bounds = df.loc[:, ["longitude", "latitude"]].describe().loc[["min", "max"], :].T
     if padding:
-        bounds["min"] -= padding
-        bounds["max"] += padding
+        padding_absolute = (bounds["max"] - bounds["min"]).max() * padding
+        bounds["min"] -= padding_absolute
+        bounds["max"] += padding_absolute
     if as_mercator:
         return bounds.apply(
             lambda x: LATLON_TO_MERCATOR.transform(x["latitude"], x["longitude"])
@@ -163,7 +164,7 @@ class MapPlot:
         src_nodes = ColumnDataSource(self.df_nodes)
         src_links = ColumnDataSource(self.df_links)
 
-        bounds = get_geo_bounds(model, as_mercator=True, padding=0.01)
+        bounds = get_geo_bounds(model, as_mercator=True)
 
         # tooltips_nodes = [("node", "@nodes")] + [
         #     (i.replace("__", " (") + ")", f"@{i}") for i in df_nodes.columns if "__" in i
