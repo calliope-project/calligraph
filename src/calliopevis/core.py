@@ -101,12 +101,6 @@ class ModelContainer:
             coords = set(coords) - set(ignore)
         return coords
 
-    def get_grouped_transmission_techs(self, grouping_param):
-        groups = self.model.inputs[grouping_param]
-        transmission_techs = (
-            self.model._model_data.coords["transmission"].to_index().to_list()
-        )
-
 
 def filter_selectors(
     da: xr.DataArray, selectors: Dict[str, List[str]], additional_subset: Dict = None
@@ -114,10 +108,6 @@ def filter_selectors(
 
     for k, v in selectors.items():
         assert isinstance(v, list)
-
-    # Work on a copy so we don't touch the passed-in data
-    # import copy
-    # selectors = copy.deepcopy(selectors)
 
     selector_keys_to_delete = [
         k for k in selectors.keys() if k not in da.dims or selectors[k] is None
@@ -171,10 +161,6 @@ def get_solve_config_df(model_container):
 
 
 def get_df_static(model_container, variable, selectors):
-    # da = model._model_data.flow_cap.where(
-    #         ~model.inputs.base_tech.str.contains("demand|transmission")
-    #     )
-
     da = model_container.model._model_data[variable]
 
     df_capacity = (
@@ -204,18 +190,13 @@ def get_df_timeseries(model_container, variable, selectors, resample=None):
         .dropna()
         .to_frame(variable)
     )
+
     if resample is not None:
-        # df = df.groupby([pd.Grouper(level='techs'),
-        #     pd.Grouper(level='carriers'),
-        #     pd.Grouper(level='timesteps', freq=resample)]
-        #   ).mean()
         df = df.groupby(
             [pd.Grouper(level=i) for i in df.index.names if i != "timesteps"]
             + [pd.Grouper(level="timesteps", freq=resample)]
         ).mean()
 
-    # df_electricity_demand = df_electricity[df_electricity.techs == "demand_electricity"]
-    # df_electricity_other = df_electricity[df_electricity.techs != "demand_electricity"]
     return df.reset_index()
 
 

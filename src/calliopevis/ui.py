@@ -1,7 +1,9 @@
 import itertools
 
 import panel as pn
-from panel.template import EditableTemplate as Template
+
+# from panel.template import EditableTemplate as Template
+from panel.template import BootstrapTemplate as Template
 
 from calliopevis import pages
 from calliopevis.core import ModelContainer

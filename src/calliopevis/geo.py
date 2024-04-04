@@ -199,7 +199,7 @@ class MapPlot:
             HoverTool(
                 renderers=[p1],
                 tooltips=tooltips_nodes,
-                visible=True,
+                toggleable=True,
                 description="Hover info on nodes",
             )
         )
@@ -220,7 +220,7 @@ class MapPlot:
             HoverTool(
                 renderers=[p2],
                 tooltips=tooltips_links,
-                visible=True,
+                toggleable=True,
                 description="Hover info on links",
             )
         )
