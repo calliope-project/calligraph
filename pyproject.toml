@@ -85,8 +85,7 @@ version = { attr = "calliopevis.__init__.__version__" }
 [project.scripts]
 calliopevis = "calliopevis.cli:calliopevis_cli"
 
-# [project.urls]
-# website = "https://www.callio.pe/"
-# repository = "https://github.com/calliope-project/calliope"
-# documentation = "https://calliope.readthedocs.io"
-# changelog = "https://github.com/calliope-project/calliope/changelog.rst"
+[project.urls]
+website = "https://www.callio.pe/"
+repository = "https://github.com/sjpfenninger/calliopevis"
+changelog = "https://github.com/sjpfenninger/calliopevis/CHANGELOG.md"
