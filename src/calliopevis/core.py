@@ -20,6 +20,37 @@ class ResettableParam(param.Parameterized):
     reset = param.Action(_reset, label="Reset")
 
 
+class ColorPickerParam(ResettableParam):
+    def __init__(self, **params):
+        super().__init__(**params)
+        self._pause_watching = False
+
+    def add_color_parameter(self, name, color):
+        self.param.add_parameter(name, param.Color(color))
+        self.param.watch(self._update_color, [name])
+
+    def _update_color(self, event):
+        if self._pause_watching is False and self.change_same_together is True:
+            self._pause_watching = True
+            event_param = event.name
+            prev_value = event.old
+            new_value = event.new
+
+            for param_name, param_value in self.param.values().items():
+                if (
+                    param_name not in self.IGNORED_PARAMS
+                    and param_name != event_param
+                    and prev_value == param_value
+                ):
+                    self.param.set_param(**{param_name: new_value})
+
+            self._pause_watching = False
+
+    IGNORED_PARAMS = ["reset", "change_same_together"]
+
+    change_same_together = param.Boolean(False, label="Change same colors together")
+
+
 class ModelContainer:
     def __init__(self, path: str | Path):
         """
@@ -81,9 +112,9 @@ class ModelContainer:
         all_colors = {
             tech: colors.get(tech, "#" + random.randbytes(3).hex()) for tech in techs
         }
-        colors_techs = ResettableParam()
+        colors_techs = ColorPickerParam()
         for k, v in all_colors.items():
-            colors_techs.param.add_parameter(k, param.Color(v))
+            colors_techs.add_color_parameter(k, v)
         return colors_techs
 
     def get_base_tech_members(self, base_tech):
