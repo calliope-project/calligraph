@@ -172,6 +172,8 @@ class MapPlot:
             x_axis_type="mercator",
             y_axis_type="mercator",
             sizing_mode="scale_both",
+            tools="pan,wheel_zoom,box_zoom,reset",
+            active_scroll="wheel_zoom",
         )
 
         p.add_tile(xyz.Stadia.StamenTonerLite, retina=True)
