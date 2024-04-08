@@ -1,7 +1,7 @@
 import click
 import panel as pn
 
-import calliopevis
+import cview
 
 
 @click.command()
@@ -13,16 +13,16 @@ import calliopevis
     help="Run in development mode. Currently this enables autoreload on code change.",
     is_flag=True,
 )
-def calliopevis_cli(path, no_browser, port, development):
+def cview_cli(path, no_browser, port, development):
     """
     Opens the Calliope NetCDF model file given by PATH in an interactive visualisation
     tool.
 
     """
-    app = calliopevis.ui.app(path)
+    app = cview.ui.app(path)
     devt_kwargs = dict(autoreload=True) if development is True else dict()
     pn.serve(port=port, panels=app, show=False if no_browser else True, **devt_kwargs)
 
 
 if __name__ == "__main__":
-    calliopevis_cli()
+    cview_cli()

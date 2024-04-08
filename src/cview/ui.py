@@ -3,8 +3,8 @@ import itertools
 import panel as pn
 from panel.template import BootstrapTemplate
 
-from calliopevis import pages
-from calliopevis.core import ModelContainer
+from cview import pages
+from cview.core import ModelContainer
 
 pn.extension("plotly")
 pn.extension("perspective")

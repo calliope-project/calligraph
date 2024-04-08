@@ -1,27 +1,27 @@
-# `calliopevis`
+# Calliope View: `cview`
 
-A tool to interactively explore and visualise Calliope model results.
+`cview`, pronounced "sea view", is a tool to interactively explore and visualise Calliope model results.
 
 > [!IMPORTANT]
-> Note that this is pre-release software and there are likely to bugs. Please [report issues and feedback on GitHub](https://github.com/sjpfenninger/calliopevis)!
+> Note that this is pre-release software and there are likely to bugs. Please [report issues and feedback on GitHub](https://github.com/calliope-project/cview)!
 
 > [!CAUTION]
-> `calliopevis` only works with Calliope 0.7 or higher. If you are running Calliope 0.6 or lower, use the built-in visualisation tools instead.
+> `cview` only works with Calliope 0.7 or higher. If you are running Calliope 0.6 or lower, use the built-in visualisation tools instead.
 
 ## Installation
 
 * [Install a version of Calliope >= 0.7](https://calliope.readthedocs.io/en/latest/)
-* In the Python environment in which Calliope >= 0.7 is installed, run: `pip install git+https://github.com/sjpfenninger/calliopevis.git#egg=calliopevis`
+* In the Python environment in which Calliope >= 0.7 is installed, run: `pip install git+https://github.com/calliope-project/cview.git#egg=cview`
 
 ## Use
 
-Save a solved Calliope model to a NetCDF file with `model.to_netcdf()` or by using the appropriate settings with the Calliope command-line interface. Then run `calliopevis` in the command line:
+Save a solved Calliope model to a NetCDF file with `model.to_netcdf()` or by using the appropriate settings with the Calliope command-line interface. Then run `cview` in the command line:
 
 ```shell
-$ calliopevis your_model_results.nc
+$ cview your_model_results.nc
 ```
 
-This launches the `calliopevis` web interface in the default web browser on your system. To use a custom port, supply the `--port PORTNUMBER` option; if you do not want the default web browser to open, specify `-nb` or `--no-browser`.
+This launches the `cview` web interface in the default web browser on your system. To use a custom port, supply the `--port PORTNUMBER` option; if you do not want the default web browser to open, specify `-nb` or `--no-browser`.
 
 To experiment with the built-in urban-scale model:
 
@@ -35,7 +35,7 @@ m.to_netcdf("urban_scale.nc")
 Then:
 
 ```shell
-$ calliopevis urban_scale.nc
+$ cview urban_scale.nc
 ```
 
 ## Known issues
@@ -43,4 +43,3 @@ $ calliopevis urban_scale.nc
 * The page layout is inflexible and particularly suboptimal on the maps page. This will be improved once Panel 1.4.1 is available with a fix for [#6653](https://github.com/holoviz/panel/issues/6653).
 * If left running for a while with no interaction, the web interface may become unresponsive and has to be refreshed manually.
 * Code is badly documented and needs some cleaning up.
-* `calliopevis` is a placeholder name that may yet be improved.

@@ -6,7 +6,7 @@ from bokeh.models import ColumnDataSource, HoverTool, TapTool
 from bokeh.plotting import figure
 from pyproj import Transformer
 
-from calliopevis.core import filter_selectors
+from cview.core import filter_selectors
 
 # Transform from Web Mercator to Lat/Lon
 MERCATOR_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326")

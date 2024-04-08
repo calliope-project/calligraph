@@ -1,8 +1,8 @@
 import panel as pn
 
-import calliopevis.core as core
-import calliopevis.geo
-import calliopevis.plot
+import cview.core as core
+import cview.geo
+import cview.plot
 
 
 def page_home(ui_view):
@@ -30,7 +30,7 @@ def page_pernodetech(ui_view):
         variables="variables_notimesteps",
     )
     plot_pane = pn.bind(
-        calliopevis.plot.fig_static,
+        cview.plot.fig_static,
         model_container=model_container,
         variable=widget_variable_pernodetech,
         **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
@@ -54,7 +54,7 @@ def page_timeseries(ui_view):
     )
 
     plot_pane = pn.bind(
-        calliopevis.plot.fig_timeseries,
+        cview.plot.fig_timeseries,
         model_container=model_container,
         variable=widget_variable_ts,
         time_res=btn_time_res,
@@ -83,7 +83,7 @@ def page_map(ui_view):
         variables="variables_notimesteps_links",
     )
 
-    map_plot = calliopevis.geo.MapPlot(ui_view)
+    map_plot = cview.geo.MapPlot(ui_view)
 
     plot_pane = pn.bind(
         map_plot.plot,
@@ -98,7 +98,7 @@ def page_map(ui_view):
     )
 
     plot_timeseries_pane = pn.bind(
-        calliopevis.plot.fig_timeseries,
+        cview.plot.fig_timeseries,
         model_container=model_container,
         variable="flow_out",  # FIXME: selector for timeseries variables
         time_res=btn_time_res,
@@ -109,7 +109,7 @@ def page_map(ui_view):
     )
 
     plot_static_pane = pn.bind(
-        calliopevis.plot.fig_static,
+        cview.plot.fig_static,
         model_container=model_container,
         variable=widget_variable_map_nodes,
         **{

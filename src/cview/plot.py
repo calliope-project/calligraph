@@ -1,6 +1,6 @@
 import plotly.express as px
 
-from calliopevis.core import get_df_static, get_df_timeseries
+from cview.core import get_df_static, get_df_timeseries
 
 
 def fig_static(model_container, variable, **selectors):

@@ -44,10 +44,10 @@ ignore-overlong-task-comments = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["calliopevis*"]
+include = ["cview*"]
 
 [tool.setuptools.package-data]
-calliopevis = []
+cview = []
 
 [tool.setuptools]
 license-files = ["LICENSE", "CITATION"]
@@ -57,7 +57,7 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "calliopevis"
+name = "cview"
 authors = [
   { name = "Stefan Pfenninger", email = "stefan@pfenninger.org" },
 ]
@@ -80,12 +80,12 @@ dynamic = ["version", "dependencies"]
 
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
-version = { attr = "calliopevis.__init__.__version__" }
+version = { attr = "cview.__init__.__version__" }
 
 [project.scripts]
-calliopevis = "calliopevis.cli:calliopevis_cli"
+cview = "cview.cli:cview_cli"
 
 [project.urls]
 website = "https://www.callio.pe/"
-repository = "https://github.com/sjpfenninger/calliopevis"
-changelog = "https://github.com/sjpfenninger/calliopevis/CHANGELOG.md"
+repository = "https://github.com/calliope-project/cview"
+changelog = "https://github.com/calliope-project/cview/CHANGELOG.md"
