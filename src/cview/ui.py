@@ -8,13 +8,16 @@ from cview.core import ModelContainer
 
 pn.extension("plotly")
 pn.extension("perspective")
+pn.extension("gridstack")
+pn.extension(design="bootstrap")
 
 
 class UIView:
 
     COORD_ORDERING = ["carriers", "nodes", "techs", "costs"]
-
     TECHS_COORD_ORDERING = ["supply", "conversion", "storage", "demand", "transmission"]
+    HEADER_BACKGROUND_COLOR = "#55b3f9"
+    HEADER_TEXT_COLOR = "#ffffff"
 
     def __init__(self, model_container):
         self.model_container = model_container
@@ -167,9 +170,10 @@ class UIView:
         )
 
         return pn.Card(
-            pn.Column(*selectors),
-            pn.Row(txt_network_grouping_param),
+            pn.Column(*selectors, styles=dict(margin="0")),
+            pn.Row(txt_network_grouping_param, styles=dict(margin="0 0 8px 0")),
             title="Filter Techs",
+            width=320,
         )
 
     def _update_tech_coords(self, **kwargs):
@@ -246,14 +250,20 @@ class UIView:
     def switch_page(self, page):
         # Assumes that every page generator function in self.pages[page]["view"] either
         # returns a single appropriate Panel object such as pn.Column or a list of a
-        # maximum of panel of two panel objects (given that two columns are hardcoded in
-        # _init_view at the moment).
+        # maximum of panel of two panel objects
         content = self.pages[page]["view"](self)
         for i in range(len(self.view.main)):
             self.view.main[i].clear()
         if isinstance(content, list):
-            for idx, item in enumerate(content):
-                self.view.main[idx].append(item)
+            gstack = pn.layout.gridstack.GridStack(
+                sizing_mode="stretch_both",
+                min_height=600,
+                allow_drag=False,
+                allow_resize=False,
+            )
+            gstack[:, 0:6] = content[0]
+            gstack[:, 6:12] = content[1]
+            self.view.main[0].append(gstack)
         else:
             self.view.main[0].append(content)
 
@@ -262,13 +272,15 @@ class UIView:
 
     def _init_view(self):
         view = BootstrapTemplate(
+            header_background=self.HEADER_BACKGROUND_COLOR,
+            header_color=self.HEADER_TEXT_COLOR,
             title=self.model_container.model._model_data.attrs["name"],
             header=[self.view_navbar],
             sidebar=[self.view_coord_selectors],
             main=[],
         )
         view.main.append(pn.Column())  # Column 0
-        view.main.append(pn.Column())  # Column 1
+        # view.main.append(pn.Column())  # Column 1
         return view
 
     def initialise_resettable_widget(

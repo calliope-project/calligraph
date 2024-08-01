@@ -129,6 +129,7 @@ class MapPlot:
             value=ui_view.coord_selectors["nodes"].value,
             options=ui_view.coord_selectors["nodes"].value,
         )
+        self.bounds = get_geo_bounds(ui_view.model_container.model, as_mercator=True)
 
     def nodes_indices_change(self, attr, old, new):
         if len(new) > 0:
@@ -160,15 +161,13 @@ class MapPlot:
         src_nodes = ColumnDataSource(self.df_nodes)
         src_links = ColumnDataSource(self.df_links)
 
-        bounds = get_geo_bounds(model, as_mercator=True)
-
         tooltips_nodes = "<div>@html__html</div>"
         tooltips_links = "<div>@node_from → @node_to</div><div>@html__html</div>"
 
         # Range bounds must be supplied in web mercator coordinates
         p = figure(
-            x_range=bounds.loc["longitude", :].to_list(),
-            y_range=bounds.loc["latitude", :].to_list(),
+            x_range=self.bounds.loc["longitude", :].to_list(),
+            y_range=self.bounds.loc["latitude", :].to_list(),
             x_axis_type="mercator",
             y_axis_type="mercator",
             sizing_mode="scale_both",
@@ -191,7 +190,7 @@ class MapPlot:
             HoverTool(
                 renderers=[p1],
                 tooltips=tooltips_nodes,
-                toggleable=True,
+                visible=True,
                 description="Hover info on nodes",
             )
         )
@@ -212,7 +211,7 @@ class MapPlot:
             HoverTool(
                 renderers=[p2],
                 tooltips=tooltips_links,
-                toggleable=True,
+                visible=True,
                 description="Hover info on links",
             )
         )
