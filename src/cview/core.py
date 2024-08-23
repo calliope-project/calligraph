@@ -205,7 +205,9 @@ def get_df_static(model_container, variable, selectors):
     return df_capacity
 
 
-def get_df_timeseries(model_container, variable, selectors, resample=None):
+def get_df_timeseries(
+    model_container, variable, selectors, time_subset=None, resample=None
+):
     results = model_container.model._model_data
 
     if variable == "flow*":
@@ -213,20 +215,17 @@ def get_df_timeseries(model_container, variable, selectors, resample=None):
     else:
         da = results[variable]
 
-    df = (
-        da.sel(filter_selectors(da, selectors))
-        .sum("nodes")
-        .to_series()
-        .where(lambda x: x != 0)
-        .dropna()
-        .to_frame(variable)
-    )
+    da_ = da.sel(filter_selectors(da, selectors))
 
-    if resample is not None:
-        df = df.groupby(
-            [pd.Grouper(level=i) for i in df.index.names if i != "timesteps"]
-            + [pd.Grouper(level="timesteps", freq=resample)]
-        ).mean()
+    if resample:
+        da_ = da_.resample(timesteps=resample).mean()
+
+    if time_subset:
+        da_ = da_.sel(timesteps=slice(*time_subset))
+
+    df = (
+        da_.sum("nodes").to_series().where(lambda x: x != 0).dropna().to_frame(variable)
+    )
 
     return df.reset_index()
 

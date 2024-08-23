@@ -42,30 +42,7 @@ def page_pernodetech(ui_view):
 
 
 def page_timeseries(ui_view):
-    model_container = ui_view.model_container
-    btn_time_res = pn.widgets.RadioButtonGroup(
-        options=["Monthly", "Daily", "Original resolution"], value="Monthly"
-    )
-    widget_variable_ts = ui_view.initialise_resettable_widget(
-        id="variable_ts",
-        name="Variable",
-        value="flow*",
-        variables="variables_timesteps",
-    )
-
-    plot_pane = pn.bind(
-        cview.plot.fig_timeseries,
-        model_container=model_container,
-        variable=widget_variable_ts,
-        time_res=btn_time_res,
-        **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
-    )
-
-    return pn.Column(
-        pn.Row("Time resolution:", btn_time_res),
-        widget_variable_ts,
-        pn.pane.Plotly(plot_pane, sizing_mode="stretch_both"),
-    )
+    return cview.plot.pane_timeseries(ui_view)
 
 
 def page_map(ui_view):
