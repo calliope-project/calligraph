@@ -126,10 +126,7 @@ def pane_timeseries_plot_with_slider(ui_view, variable, time_res, **selectors):
     )
 
 
-def pane_timeseries(ui_view, selectors=None):
-
-    if selectors is None:
-        selectors = {i: ui_view.coord_selectors[i] for i in ui_view.filter_coords}
+def pane_timeseries(ui_view, **selectors):
 
     btn_time_res = pn.widgets.RadioButtonGroup(
         options=["Monthly", "Daily", "Original resolution"], value="Monthly"

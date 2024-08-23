@@ -42,7 +42,9 @@ def page_pernodetech(ui_view):
 
 
 def page_timeseries(ui_view):
-    return cview.plot.pane_timeseries(ui_view)
+    return cview.plot.pane_timeseries(
+        ui_view, **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords}
+    )
 
 
 def page_map(ui_view):
@@ -62,7 +64,7 @@ def page_map(ui_view):
 
     map_plot = cview.geo.MapPlot(ui_view)
 
-    plot_pane = pn.bind(
+    plot_map_pane = pn.bind(
         map_plot.plot,
         ui_view=ui_view,
         node_variable=widget_variable_map_nodes,
@@ -70,15 +72,9 @@ def page_map(ui_view):
         **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
     )
 
-    btn_time_res = pn.widgets.RadioButtonGroup(
-        options=["Monthly", "Daily", "Original resolution"], value="Monthly"
-    )
-
     plot_timeseries_pane = pn.bind(
-        cview.plot.fig_timeseries,
-        model_container=model_container,
-        variable="flow_out",  # FIXME: selector for timeseries variables
-        time_res=btn_time_res,
+        cview.plot.pane_timeseries,
+        ui_view=ui_view,
         **{
             i: ui_view.coord_selectors[i] for i in ui_view.filter_coords if i != "nodes"
         },
@@ -95,10 +91,10 @@ def page_map(ui_view):
         nodes=map_plot.selected_nodes,
     )
 
-    map_side_plots = pn.Column(btn_time_res, plot_timeseries_pane, plot_static_pane)
+    map_side_plots = pn.Column(plot_timeseries_pane, plot_static_pane)
 
     return [
-        pn.Column(widget_variable_map_nodes, widget_variable_map_links, plot_pane),
+        pn.Column(widget_variable_map_nodes, widget_variable_map_links, plot_map_pane),
         pn.Column(map_side_plots),
     ]
 
