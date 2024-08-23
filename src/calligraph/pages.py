@@ -1,8 +1,8 @@
 import panel as pn
 
-import cview.core as core
-import cview.geo
-import cview.plot
+import calligraph.core as core
+import calligraph.geo
+import calligraph.plot
 
 
 def page_home(ui_view):
@@ -30,7 +30,7 @@ def page_pernodetech(ui_view):
         variables="variables_notimesteps",
     )
     plot_pane = pn.bind(
-        cview.plot.fig_static,
+        calligraph.plot.fig_static,
         model_container=model_container,
         variable=widget_variable_pernodetech,
         **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords},
@@ -42,7 +42,7 @@ def page_pernodetech(ui_view):
 
 
 def page_timeseries(ui_view):
-    return cview.plot.pane_timeseries(
+    return calligraph.plot.pane_timeseries(
         ui_view, **{i: ui_view.coord_selectors[i] for i in ui_view.filter_coords}
     )
 
@@ -62,7 +62,7 @@ def page_map(ui_view):
         variables="variables_notimesteps_links",
     )
 
-    map_plot = cview.geo.MapPlot(ui_view)
+    map_plot = calligraph.geo.MapPlot(ui_view)
 
     plot_map_pane = pn.bind(
         map_plot.plot,
@@ -73,7 +73,7 @@ def page_map(ui_view):
     )
 
     plot_timeseries_pane = pn.bind(
-        cview.plot.pane_timeseries,
+        calligraph.plot.pane_timeseries,
         ui_view=ui_view,
         **{
             i: ui_view.coord_selectors[i] for i in ui_view.filter_coords if i != "nodes"
@@ -82,7 +82,7 @@ def page_map(ui_view):
     )
 
     plot_static_pane = pn.bind(
-        cview.plot.fig_static,
+        calligraph.plot.fig_static,
         model_container=model_container,
         variable=widget_variable_map_nodes,
         **{

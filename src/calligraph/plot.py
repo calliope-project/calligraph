@@ -1,7 +1,7 @@
 import panel as pn
 import plotly.express as px
 
-from cview.core import get_df_static, get_df_timeseries
+from calligraph.core import get_df_static, get_df_timeseries
 
 
 def fig_static(model_container, variable, **selectors):
@@ -24,7 +24,7 @@ def fig_static(model_container, variable, **selectors):
 
 def data_timeseries(model_container, variable, time_res, time_range=None, **selectors):
 
-    RESOLUTIONS = {"Monthly": "1M", "Daily": "1D"}
+    RESOLUTIONS = {"Monthly": "1ME", "Daily": "1D"}
 
     data = get_df_timeseries(
         model_container,

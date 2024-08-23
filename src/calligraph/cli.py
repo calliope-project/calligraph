@@ -1,7 +1,7 @@
 import click
 import panel as pn
 
-import cview
+import calligraph
 
 
 @click.command()
@@ -13,16 +13,16 @@ import cview
     help="Run in development mode. Currently this enables autoreload on code change.",
     is_flag=True,
 )
-def cview_cli(path, no_browser, port, development):
+def calligraph_cli(path, no_browser, port, development):
     """
     Opens the Calliope NetCDF model file given by PATH in an interactive visualisation
     tool.
 
     """
-    app = cview.ui.app(path)
+    app = calligraph.ui.app(path)
     devt_kwargs = dict(autoreload=True) if development is True else dict()
     pn.serve(port=port, panels=app, show=False if no_browser else True, **devt_kwargs)
 
 
 if __name__ == "__main__":
-    cview_cli()
+    calligraph_cli()
