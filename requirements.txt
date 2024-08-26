@@ -1,4 +1,4 @@
-# calliope>=0.7,<0.8
+calliope>=0.7.0.dev3,<0.8
 panel>=1.4.5,<1.5
 plotly>=5,<6
 pyproj==3.6.1

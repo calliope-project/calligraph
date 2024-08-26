@@ -10,8 +10,7 @@
 
 ## Installation
 
-* [Install a version of Calliope >= 0.7](https://calliope.readthedocs.io/en/latest/)
-* In the Python environment in which Calliope >= 0.7 is installed, run: `pip install git+https://github.com/calliope-project/calligraph.git#egg=calligraph`
+`pip install calligraph`
 
 ## Use
 
