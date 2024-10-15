@@ -274,7 +274,7 @@ class UIView:
         view = BootstrapTemplate(
             header_background=self.HEADER_BACKGROUND_COLOR,
             header_color=self.HEADER_TEXT_COLOR,
-            title=self.model_container.model._model_data.attrs["name"],
+            title=self.model_container.name,
             header=[self.view_navbar],
             sidebar=[self.view_coord_selectors],
             main=[],

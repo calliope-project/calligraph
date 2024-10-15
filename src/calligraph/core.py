@@ -132,6 +132,14 @@ class ModelContainer:
             coords = set(coords) - set(ignore)
         return coords
 
+    @property
+    def name(self):
+        name = str(self.model._model_data.attrs["name"])
+        if name == "None":
+            return "Unnamed model"
+        else:
+            return name
+
 
 def filter_selectors(
     da: xr.DataArray, selectors: Dict[str, List[str]], additional_subset: Dict = None
