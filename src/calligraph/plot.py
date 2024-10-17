@@ -1,3 +1,4 @@
+import pandas as pd
 import panel as pn
 import plotly.express as px
 
@@ -40,9 +41,8 @@ def data_timeseries(
     return data
 
 
-def fig_object_timeseries(model_container, variable, data):
-
-    fig = px.bar(
+def fig_object_timeseries_bar(model_container, variable, data):
+    return px.bar(
         data,
         x="timesteps",
         y=variable,
@@ -52,40 +52,85 @@ def fig_object_timeseries(model_container, variable, data):
             else "nodes" if "nodes" in data.columns else None
         ),
         color_discrete_map=model_container.colors_techs.param.values(),
-        # render_mode="webgl",  # FIXME allow choosing px.scatter and webgl as an option
     )
 
-    # plotly rangeslider is too slow, need another solution
-    # fig.update_layout(xaxis={"rangeslider": {"visible": True}})
 
-    # FIXME: add ability to draw a line/scatter for one chosen variable
-    # fig.add_scatter(
-    #     x=df_electricity_demand.timesteps,
-    #     y=-1 * df_electricity_demand["Flow in/out (kWh)"],
-    #     marker_color="black",
-    #     name="demand",
-    # )
+def fig_object_timeseries_line(model_container, variable, data):
+    return px.line(
+        data,
+        x="timesteps",
+        y=variable,
+        color=(
+            "techs"
+            if "techs" in data.columns
+            else "nodes" if "nodes" in data.columns else None
+        ),
+        color_discrete_map=model_container.colors_techs.param.values(),
+        render_mode="webgl",
+    )
 
-    return fig
+
+def fig_object_timeseries_duration(model_container, variable, data):
+
+    # Obtain list of columns without "timesteps" and the selected variable
+    non_ts_var_cols = list(set(data.columns) - set(["timesteps", variable]))
+
+    # A dict of all combinations of non_ts_var_col values that have some data
+    combinations = (
+        data.groupby(non_ts_var_cols).count().reset_index()[non_ts_var_cols].T.to_dict()
+    )
+
+    # We iterate over all combinations and query the `data` dataframe, then sort on only
+    # the values of variable in that subset, before combining all the resulting sub-dataframes
+    # back into a duration-sorted one
+    dfs = {}
+    for item in combinations.values():
+        query = " and ".join(["{} == '{}'".format(k, v) for k, v in item.items()])
+        ldc_data = data.query(query).sort_values(variable, ascending=False)
+        ldc_data["timestep number"] = range(len(ldc_data))
+        dfs[tuple(item.values())] = ldc_data
+    data_sorted = pd.concat(dfs, ignore_index=True)
+
+    return px.line(
+        data_sorted,
+        x="timestep number",
+        y=variable,
+        color=(
+            "techs"
+            if "techs" in data.columns
+            else "nodes" if "nodes" in data.columns else None
+        ),
+        color_discrete_map=model_container.colors_techs.param.values(),
+        render_mode="webgl",
+    )
 
 
-def fig_timeseries(model_container, variable, time_res, sum_by, **selectors):
+TIMESERIES_FUNCTIONS = {
+    "Bar": fig_object_timeseries_bar,
+    "Line": fig_object_timeseries_line,
+    "Duration": fig_object_timeseries_duration,
+}
+
+
+def fig_timeseries(model_container, variable, plot_type, time_res, sum_by, **selectors):
     data = data_timeseries(model_container, variable, time_res, sum_by, **selectors)
-    fig = fig_object_timeseries(model_container, variable, data)
+    fig = TIMESERIES_FUNCTIONS[plot_type](model_container, variable, data)
     return fig
 
 
 def fig_timeseries_with_subset(
-    model_container, variable, time_res, time_range, sum_by, **selectors
+    model_container, variable, plot_type, time_res, time_range, sum_by, **selectors
 ):
     data = data_timeseries(
         model_container, variable, time_res, time_range, sum_by, **selectors
     )
-    fig = fig_object_timeseries(model_container, variable, data)
+    fig = TIMESERIES_FUNCTIONS[plot_type](model_container, variable, data)
     return fig
 
 
-def pane_timeseries_plot_with_slider(ui_view, variable, sum_by, time_res, **selectors):
+def pane_timeseries_plot_with_slider(
+    ui_view, variable, plot_type, sum_by, time_res, **selectors
+):
     model_container = ui_view.model_container
 
     data_for_widget_init = data_timeseries(
@@ -135,6 +180,7 @@ def pane_timeseries_plot_with_slider(ui_view, variable, sum_by, time_res, **sele
         fig_timeseries_with_subset,
         model_container=model_container,
         variable=variable,
+        plot_type=plot_type,
         time_res=time_res,
         time_range=widget_datetime_range_slider,
         sum_by=sum_by.lower(),
@@ -160,6 +206,10 @@ def pane_timeseries(ui_view, **selectors):
         variables="variables_timesteps",
     )
 
+    widget_plot_type_ts = pn.widgets.RadioButtonGroup(
+        options=["Bar", "Line", "Duration"], value="Bar"
+    )
+
     btn_sumover_ts = pn.widgets.RadioButtonGroup(
         name="Sum over", options=["Nodes", "Techs"], value="Nodes"
     )
@@ -169,6 +219,7 @@ def pane_timeseries(ui_view, **selectors):
         pane_timeseries_plot_with_slider,
         ui_view=ui_view,
         variable=widget_variable_ts,
+        plot_type=widget_plot_type_ts,
         sum_by=btn_sumover_ts,
         time_res=btn_time_res,
         **selectors,
@@ -177,7 +228,7 @@ def pane_timeseries(ui_view, **selectors):
     sum_over_help_text = "Caution: if you sum over techs, you probably want to filter only some techs in the sidebar, otherwise demand and supply techs may add up to zero and you will not see anything in the plot."
 
     return pn.Column(
-        widget_variable_ts,
+        pn.Row(widget_variable_ts, widget_plot_type_ts),
         pn.Row(
             pn.widgets.TooltipIcon(value=sum_over_help_text),
             "Sum over:",
