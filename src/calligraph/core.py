@@ -236,7 +236,10 @@ def get_df_timeseries(
     if time_subset:
         da_ = da_.sel(timesteps=slice(*time_subset))
 
-    df = da_.sum(sum_by).to_series().where(lambda x: x != 0).dropna().to_frame(variable)
+    if sum_by in da_.dims:
+        da_ = da_.sum(sum_by)
+
+    df = da_.to_series().to_frame(variable)
 
     return df.reset_index()
 

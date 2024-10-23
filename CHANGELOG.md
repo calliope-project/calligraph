@@ -1,3 +1,7 @@
+## 0.1.1.dev2
+
+* Minor bug fixes: 0 values in timeseries may be dropped; summing should only happen when dim exists
+
 ## 0.1.1.dev1 (2024-10-18)
 
 * "Line" and "Duration" time series plot types
