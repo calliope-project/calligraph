@@ -89,7 +89,7 @@ def get_geo_node_data(model, techs, variable, selectors):
     columns = list(df.index.names)
     columns.remove("nodes")
     df = df.pivot_table(index="nodes", columns=columns)
-    df[*["html"] * len(df.columns.names)] = df.apply(
+    df[["html"] * len(df.columns.names)] = df.apply(
         lambda row: row.dropna().to_frame().to_html(), axis=1
     )
     df.columns = df.T.index.droplevel().to_flat_index()
