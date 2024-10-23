@@ -1,0 +1,4 @@
+*.ipynb
+.pixi
+*.egg-info
+dist
