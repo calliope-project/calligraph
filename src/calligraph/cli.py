@@ -6,7 +6,12 @@ import calligraph
 
 @click.command()
 @click.argument("path", type=click.Path(exists=True))
-@click.option("--port", "-p", help="Port on which to serve the app.", default=18080)
+@click.option(
+    "--port",
+    "-p",
+    help="Port on which to serve the app. By default (0), a random available port is chosen.",
+    default=0,
+)
 @click.option("--no-browser", "-nb", help="Do not open a browser.", is_flag=True)
 @click.option(
     "--development",

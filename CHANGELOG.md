@@ -1,3 +1,7 @@
+## 0.1.1.dev3
+
+* CLI: default to random port, making it easier to run several instances in parallel
+
 ## 0.1.1.dev2
 
 * Minor bug fixes: 0 values in timeseries may be dropped; summing should only happen when dim exists
