@@ -144,7 +144,6 @@ class ModelContainer:
 def filter_selectors(
     da: xr.DataArray, selectors: Dict[str, List[str]], additional_subset: Dict = None
 ) -> Dict[str, List[str]]:
-
     for k, v in selectors.items():
         assert isinstance(v, list)
 
@@ -189,13 +188,17 @@ def get_model_summary_df(model_container):
 
 def get_build_config_df(model_container):
     results = model_container.model._model_data
-    df = pd.DataFrame.from_dict(results.attrs["config"]["build"], orient="index")
+    df = pd.DataFrame.from_dict(
+        results.attrs["config"]["build"].as_dict_flat(), orient="index"
+    )
     return _clean_df(df)
 
 
 def get_solve_config_df(model_container):
     results = model_container.model._model_data
-    df = pd.DataFrame.from_dict(results.attrs["config"]["solve"], orient="index")
+    df = pd.DataFrame.from_dict(
+        results.attrs["config"]["solve"].as_dict_flat(), orient="index"
+    )
     return _clean_df(df)
 
 
@@ -245,7 +248,6 @@ def get_df_timeseries(
 
 
 def get_generic_df(model_container, variable, dropna=False, **selectors):
-
     da = model_container.model._model_data[variable]
 
     df = da.sel(filter_selectors(da, selectors)).to_dataframe()
