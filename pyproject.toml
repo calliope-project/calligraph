@@ -63,6 +63,7 @@ authors = [
 ]
 maintainers = [
   { name = "Stefan Pfenninger", email = "stefan@pfenninger.org" },
+  { name = "Bryn Pickering", email = "17178478+brynpickering@users.noreply.github.com" },
 ]
 description = "Visualisation tool for Calliope."
 readme = "README.md"
