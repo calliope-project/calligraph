@@ -179,7 +179,7 @@ def get_model_summary_df(model_container):
         ("Nodes", len(results.nodes)),
         ("Carriers", len(results.carriers)),
         ("Timesteps", len(results.timesteps)),
-        ("Applied additional math", results.attrs["applied_additional_math"]),
+        ("Applied additional math", model_container.model.applied_math.history),
         ("Termination condition", results.attrs["termination_condition"]),
     ]
     df = pd.DataFrame(data).set_index(0)
@@ -188,17 +188,13 @@ def get_model_summary_df(model_container):
 
 def get_build_config_df(model_container):
     results = model_container.model._model_data
-    df = pd.DataFrame.from_dict(
-        results.attrs["config"]["build"].as_dict_flat(), orient="index"
-    )
+    df = pd.Series(results.attrs["config"]["build"].as_dict_flat()).to_frame()
     return _clean_df(df)
 
 
 def get_solve_config_df(model_container):
     results = model_container.model._model_data
-    df = pd.DataFrame.from_dict(
-        results.attrs["config"]["solve"].as_dict_flat(), orient="index"
-    )
+    df = pd.Series(results.attrs["config"]["solve"].as_dict_flat()).to_frame()
     return _clean_df(df)
 
 

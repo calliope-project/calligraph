@@ -1,4 +1,32 @@
-*.ipynb
-.pixi
+# OS-specific
+.DS_Store
+
+# Editors
+*~
+\#*\#
+**/.vscode
+
+# Byte-compiled files
+__pycache__
+*.pyc
+
+# Build output
+build
 *.egg-info
-dist
+
+# Reports
+.coverage
+.coverage.*
+.hypothesis/
+coverage.xml
+*.cover
+
+# Caches
+.*[cC]ache*
+
+# Project-specific
+dist/
+.ipynb_checkpoints
+outputs/
+site/
+*.nc
