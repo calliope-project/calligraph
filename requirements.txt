@@ -1,5 +1,5 @@
-calliope>=0.7.0.dev4,<0.8
-panel>=1.5.2,<1.6
-plotly>=5,<6
-pyproj==3.6.1
-click==8.1
+calliope>=0.7.0dev5
+panel>=1.5.2
+plotly>=5
+pyproj>=3.6.1
+click>=8.1

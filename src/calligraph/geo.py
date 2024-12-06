@@ -1,3 +1,5 @@
+from typing import Callable, Literal
+
 import calliope
 import pandas as pd
 import panel as pn
@@ -9,8 +11,8 @@ from pyproj import Transformer
 from calligraph.core import filter_selectors
 
 # Transform from Web Mercator to Lat/Lon
-MERCATOR_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326")
-LATLON_TO_MERCATOR = Transformer.from_crs("EPSG:4326", "EPSG:3857")
+MERCATOR_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
+LONLAT_TO_MERCATOR = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
 
 
 def get_geo_bounds(model: calliope.Model, as_mercator=False, padding=0.1):
@@ -21,9 +23,7 @@ def get_geo_bounds(model: calliope.Model, as_mercator=False, padding=0.1):
         bounds["min"] -= padding_absolute
         bounds["max"] += padding_absolute
     if as_mercator:
-        return bounds.apply(
-            lambda x: LATLON_TO_MERCATOR.transform(x["latitude"], x["longitude"])
-        )
+        return bounds.apply(_to_mercator)
     else:
         return bounds
 
@@ -36,87 +36,68 @@ def get_nodes_geo(model, as_mercator=False, selectors=None):
 
     nodes = nodes.to_dataframe()
     if as_mercator:
-        return nodes.apply(
-            lambda x: LATLON_TO_MERCATOR.transform(x["latitude"], x["longitude"]),
-            axis=1,
-            result_type="broadcast",
-        )
+        updated = nodes.apply(_to_mercator, axis=1)
+        return updated
     else:
         return nodes
 
 
-def get_links_geo(model, nodes, selectors=None):
-    df = pd.DataFrame(
-        {
-            k: {"node_from": v["from"], "node_to": v["to"]}
-            for k, v in model._model_def_dict["techs"].items()
-            if "from" in v and v["from"] in nodes.index and v["to"] in nodes.index
-        }
-    ).T
-    if selectors is not None and "techs" in selectors:
-        df = df.loc[[i for i in selectors["techs"] if i in df.index], :]
-    return df
-
-
-def get_line_xs_ys(model, as_mercator=False, selectors=None):
-    nodes = get_nodes_geo(model, as_mercator=as_mercator, selectors=selectors)
-    links = get_links_geo(model, nodes=nodes, selectors=selectors)
-
-    if len(links) > 0:
-        for link in links.index:
-            node_from = links.loc[link, "node_from"]
-            node_to = links.loc[link, "node_to"]
-            links.loc[link, "lon_from"], links.loc[link, "lon_to"] = (
-                nodes.loc[node_from, "longitude"],
-                nodes.loc[node_to, "longitude"],
-            )
-            links.loc[link, "lat_from"], links.loc[link, "lat_to"] = (
-                nodes.loc[node_from, "latitude"],
-                nodes.loc[node_to, "latitude"],
-            )
-
-        links["xs"] = links.apply(lambda x: x[["lon_from", "lon_to"]].to_list(), axis=1)
-        links["ys"] = links.apply(lambda x: x[["lat_from", "lat_to"]].to_list(), axis=1)
-
-    return links
-
-
-def get_geo_node_data(model, techs, variable, selectors):
-    da = model._model_data[variable]
-    df = da.sel(
-        filter_selectors(da, selectors, additional_subset={"techs": techs})
-    ).to_dataframe()
-    columns = list(df.index.names)
-    columns.remove("nodes")
-    df = df.pivot_table(index="nodes", columns=columns)
-    df[*["html"] * len(df.columns.names)] = df.apply(
-        lambda row: row.dropna().to_frame().to_html(), axis=1
+def get_line_xs_ys(model, as_mercator: bool = False, selectors: dict | None = None):
+    da = model.inputs.sel(**selectors) if selectors is not None else model.inputs
+    links = (
+        da.sel(**selectors)[["longitude", "latitude"]]
+        .where(da.definition_matrix & da.base_tech.isin("transmission"))
+        .to_dataframe()
+        .droplevel("carriers")
+        .dropna()
     )
-    df.columns = df.T.index.droplevel().to_flat_index()
-    df.columns = ["__".join(i) for i in df.columns]
-    df = get_nodes_geo(model, as_mercator=True, selectors=selectors).join(df)
-    return df
-
-
-def get_geo_link_data(model, techs, variable, selectors):
-    da = model._model_data[variable]
-    df = da.sel(
-        filter_selectors(da, selectors, additional_subset={"techs": techs})
-    ).to_dataframe()
-    columns = list(df.index.names)
-    columns.remove("techs")
-
-    df = df.pivot_table(index="techs", columns=columns)
-    df[*["html"] * len(df.columns.names)] = df.apply(
-        lambda row: row.dropna().to_frame().to_html(), axis=1
+    if as_mercator:
+        links = links.apply(_to_mercator, axis=1)
+    grouped_links = links.groupby("techs", group_keys=False).apply(
+        lambda x: pd.Series(
+            {
+                "xs": x.longitude.to_list(),
+                "ys": x.latitude.to_list(),
+                "node_from": x.index.get_level_values("nodes")[0],
+                "node_to": x.index.get_level_values("nodes")[1],
+            }
+        )
     )
-    df.columns = df.T.index.droplevel().to_flat_index()
-    df.columns = ["__".join(i) for i in df.columns]
 
-    df = get_line_xs_ys(model, as_mercator=True, selectors=selectors).join(df)
+    return grouped_links
 
-    df["color"] = model.inputs.color.sel(techs=df.index)
 
+def _to_mercator(row: pd.Series) -> pd.Series:
+    transformed = LONLAT_TO_MERCATOR.transform(row["longitude"], row["latitude"])
+    return pd.Series(data=transformed, index=["longitude", "latitude"])
+
+
+def get_geo_data(
+    model: calliope.Model,
+    techs: list[str],
+    variable: str,
+    selectors: dict[str, list[str]],
+    unstack_dim: Literal["nodes", "techs"],
+    concat_func: Callable,
+) -> pd.DataFrame:
+    da = model._model_data[variable]
+    df = (
+        da.sel(filter_selectors(da, selectors, additional_subset={"techs": techs}))
+        .to_series()
+        .unstack(unstack_dim)
+    )
+    html_strings = df.apply(lambda row: row.dropna().to_frame(variable).to_html())
+    df.index = df.index.map("{0[0]}__{0[1]}".format)
+    df = pd.concat(
+        [
+            concat_func(model, as_mercator=True, selectors=selectors),
+            df.T,
+            html_strings.to_frame("html"),
+        ],
+        axis=1,
+    )
+    if unstack_dim == "techs":
+        df["color"] = model.inputs.color.sel(techs=techs)
     return df
 
 
@@ -151,18 +132,22 @@ class MapPlot:
             if ui_view.model_container.model.inputs.base_tech.loc[i].data
             == "transmission"
         ]
-        self.df_nodes = get_geo_node_data(
-            model, techs_no_transmission, node_variable, selectors
+        self.df_nodes = get_geo_data(
+            model,
+            techs_no_transmission,
+            node_variable,
+            selectors,
+            "nodes",
+            get_nodes_geo,
         )
-        self.df_links = get_geo_link_data(
-            model, techs_transmission, link_variable, selectors
+        self.df_links = get_geo_data(
+            model, techs_transmission, link_variable, selectors, "techs", get_line_xs_ys
         )
-
         src_nodes = ColumnDataSource(self.df_nodes)
         src_links = ColumnDataSource(self.df_links)
 
-        tooltips_nodes = "<div>@html__html</div>"
-        tooltips_links = "<div>@node_from → @node_to</div><div>@html__html</div>"
+        tooltips_nodes = "<div>@html</div>"
+        tooltips_links = "<div>@node_from → @node_to</div><div>@html</div>"
 
         # Range bounds must be supplied in web mercator coordinates
         p = figure(
@@ -174,7 +159,6 @@ class MapPlot:
             tools="pan,wheel_zoom,box_zoom,reset",
             active_scroll="wheel_zoom",
         )
-
         p.add_tile(xyz.Stadia.StamenTonerLite, retina=True)
 
         p1 = p.scatter(
