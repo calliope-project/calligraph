@@ -11,7 +11,7 @@ from pyproj import Transformer
 from calligraph.core import filter_selectors
 
 # Transform from Web Mercator to Lat/Lon
-MERCATOR_TO_LATLON = Transformer.from_crs("EPSG:3857", "EPSG:4326", always_xy=True)
+# `always_xy` ensures that the order of the resulting tuple remains (horizontal axis, vertical axis), irrespective of the CRS.
 LONLAT_TO_MERCATOR = Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True)
 
 
