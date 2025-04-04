@@ -38,9 +38,7 @@ class UIView:
         transmission_techs = self.coord_selectors["techs_transmission"].options
         model = self.model_container.model
 
-        if group_param is None or group_param == "":
-            groups = {i: [i] for i in transmission_techs}
-        else:
+        if group_param in model.inputs:
             groups = (
                 model.inputs[group_param]
                 .sel(techs=transmission_techs)
@@ -48,6 +46,8 @@ class UIView:
                 .groupby(group_param)
                 .groups
             )
+        else:  # e.g. it is None or ""
+            groups = {i: [i] for i in transmission_techs}
 
         return groups
 
@@ -107,6 +107,8 @@ class UIView:
         self.transmission_groups = self.__get_transmission_groups(group_param)
 
     def _update_transmission_groups(self, group_param):
+        # FIXME: this should return some feedback based on whether or not the
+        # chosen grouping exists as a variable
         self._init_transmission_groups(group_param)
         new_options = list(self.transmission_groups.keys())
         self.coord_selectors["techs_transmission_grouped"].options = new_options
@@ -128,7 +130,7 @@ class UIView:
         return selector
 
     def _tech_coord_selector(self):
-        transmission_group_param = "techs_inheritance"
+        transmission_group_param = ""
 
         selectors = []
         for base_tech in self.TECHS_COORD_ORDERING:

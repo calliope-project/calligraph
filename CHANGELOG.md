@@ -1,3 +1,7 @@
+## 0.1.1.dev6
+
+* Compatibility with calliope 0.7.0.dev6
+
 ## 0.1.1.dev4 (2024-11-22)
 
 * Fix converting config options to dataframe when there are nested dictionaries in the config (e.g. `solve.solver_options`).

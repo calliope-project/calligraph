@@ -9,14 +9,14 @@ def page_home(ui_view):
     model_container = ui_view.model_container
     return pn.Column(
         pn.Row(
-            pn.Column(
-                pn.pane.DataFrame(core.get_model_summary_df(model_container)),
-                "## Build configuration",
-                pn.pane.DataFrame(core.get_build_config_df(model_container)),
-                "## Solve configuration",
-                pn.pane.DataFrame(core.get_solve_config_df(model_container)),
-            ),
-            pn.Column(pn.Param(model_container.colors_techs, name="Tech colors")),
+            # pn.Column(
+            #     pn.pane.DataFrame(core.get_model_summary_df(model_container)),
+            #     "## Build configuration",
+            #     pn.pane.DataFrame(core.get_build_config_df(model_container)),
+            #     "## Solve configuration",
+            #     pn.pane.DataFrame(core.get_solve_config_df(model_container)),
+            # ),
+            pn.Column(pn.Param(model_container.colors_techs, name="Tech colors"))
         )
     )
 
