@@ -4,10 +4,6 @@ copyright: Copyright &copy; since 2013 <a href="https://github.com/calliope-proj
 repo_url: https://github.com/calliope-project/calligraph
 hooks:
   - docs/hooks/changelog_highlight.py
-extra:
-  min_python_version: "3.10"
-  max_python_version: "3.12"
-  calligraph_version: !!python/name:calligraph._version.__version__
 theme:
   font:
     text: Lato
