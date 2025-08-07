@@ -22,8 +22,6 @@ extra_css:
 plugins:
   - search
   - autorefs
-  - macros:
-      module_name: docs/hooks/macros
   - mkdocstrings:
       default_handler: python
       handlers:
