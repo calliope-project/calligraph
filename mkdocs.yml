@@ -1,6 +1,6 @@
 site_name: Calligraph
 site_url: https://calligraph.readthedocs.io/
-copyright: Copyright &copy; since 2013 <a href="https://github.com/calliope-project/calligraph/blob/main/AUTHORS">Calligraph contributors</a> (Apache 2.0 licensed)
+copyright: Copyright &copy; since 2024 <a href="https://github.com/calliope-project/calligraph/graphs/contributors">Calligraph contributors</a> (Apache 2.0 licensed)
 repo_url: https://github.com/calliope-project/calligraph
 hooks:
   - docs/hooks/changelog_highlight.py
