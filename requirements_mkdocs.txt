@@ -1,0 +1,6 @@
+-e .
+mkdocs >= 1.5
+mkdocs-click >= 0.6
+mkdocs-macros-plugin >= 1.0
+mkdocs-material >= 9.5
+mkdocstrings-python >= 1.7
