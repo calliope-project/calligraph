@@ -29,7 +29,7 @@ def get_geo_bounds(model: calliope.Model, as_mercator=False, padding=0.1):
 
 
 def get_nodes_geo(model, as_mercator=False, selectors=None):
-    nodes = model._model_data[["nodes", "longitude", "latitude"]]
+    nodes = model.inputs[["nodes", "longitude", "latitude"]]
 
     if selectors:
         nodes = nodes.sel(filter_selectors(nodes, selectors))
@@ -80,7 +80,9 @@ def get_geo_data(
     unstack_dim: Literal["nodes", "techs"],
     concat_func: Callable,
 ) -> pd.DataFrame:
-    da = model._model_data[variable]
+    da = (
+        model.results[variable] if variable in model.results else model.inputs[variable]
+    )
     df = (
         da.sel(filter_selectors(da, selectors, additional_subset={"techs": techs}))
         .to_series()
