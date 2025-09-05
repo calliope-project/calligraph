@@ -1,4 +1,8 @@
-## 0.1.1.dev6
+## 0.1.1.dev7
+
+* Compatibility with calliope 0.7.0.dev7
+
+## 0.1.1.dev5
 
 * Compatibility with calliope 0.7.0.dev6
 

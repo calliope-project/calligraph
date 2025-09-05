@@ -42,7 +42,7 @@ class ColorPickerParam(ResettableParam):
                     and param_name != event_param
                     and prev_value == param_value
                 ):
-                    self.param.set_param(**{param_name: new_value})
+                    self.param.update(**{param_name: new_value})
 
             self._pause_watching = False
 
@@ -60,6 +60,9 @@ class ModelContainer:
             path (str | Path)
         """
         self.model = calliope.read_netcdf(path)
+        self.combined_data = xr.merge(
+            [self.model.results, self.model.inputs], compat="override"
+        )
         self.colors_techs = self._init_tech_colors()
         self.update_variables()
 
@@ -70,7 +73,7 @@ class ModelContainer:
 
         """
         if include_inputs:
-            dataset = self.model._model_data
+            dataset = self.combined_data
         else:
             dataset = self.model.results
 
@@ -107,7 +110,7 @@ class ModelContainer:
         self.variables = variables
 
     def _init_tech_colors(self):
-        techs = self.model._model_data.techs.to_index().to_list()
+        techs = self.model.results.techs.to_index().to_list()
         colors = self.model.inputs.color.to_series().to_dict()
         all_colors = {
             tech: colors.get(tech, "#" + random.randbytes(3).hex()) for tech in techs
@@ -127,14 +130,14 @@ class ModelContainer:
         )
 
     def get_model_coords(self, ignore=["timesteps", "techs"]):
-        coords = list(self.model._model_data.coords)
+        coords = list(self.model.results.coords)
         if ignore:
             coords = set(coords) - set(ignore)
         return coords
 
     @property
     def name(self):
-        name = str(self.model._model_data.attrs["name"])
+        name = str(self.model.config.init.name)
         if name == "None":
             return "Unnamed model"
         else:
@@ -169,37 +172,40 @@ def _clean_df(df):
 
 
 def get_model_summary_df(model_container):
-    results = model_container.model._model_data
+    model = model_container.model
+    results = model_container.combined_data
     data = [
-        ("Model name", results.attrs["name"]),
-        ("Scenario name", results.attrs["scenario"]),
-        ("Applied overrides", results.attrs["applied_overrides"]),
-        ("Calliope version", results.attrs["calliope_version_initialised"]),
+        (
+            "Model name",
+            model.config.init.name,
+        ),  # FIXME why is there also a property/method
+        ("Scenario name", model.runtime.scenario),
+        ("Applied overrides", model.runtime.applied_overrides),
+        ("Calliope version", model.runtime.calliope_version_initialised),
         ("Technologies", len(results.techs)),
         ("Nodes", len(results.nodes)),
         ("Carriers", len(results.carriers)),
         ("Timesteps", len(results.timesteps)),
-        ("Applied additional math", model_container.model.applied_math.history),
-        ("Termination condition", results.attrs["termination_condition"]),
+        ("Termination condition", model.runtime.termination_condition),
     ]
     df = pd.DataFrame(data).set_index(0)
     return _clean_df(df)
 
 
 def get_build_config_df(model_container):
-    results = model_container.model._model_data
-    df = pd.Series(results.attrs["config"]["build"].as_dict_flat()).to_frame()
+    model = model_container.model
+    df = pd.Series(model.config.build.model_dump()).to_frame()
     return _clean_df(df)
 
 
 def get_solve_config_df(model_container):
-    results = model_container.model._model_data
-    df = pd.Series(results.attrs["config"]["solve"].as_dict_flat()).to_frame()
+    model = model_container.model
+    df = pd.Series(model.config.solve.model_dump()).to_frame()
     return _clean_df(df)
 
 
 def get_df_static(model_container, variable, selectors):
-    da = model_container.model._model_data[variable]
+    da = model_container.combined_data[variable]
 
     df_capacity = (
         da.sel(filter_selectors(da, selectors))
@@ -220,7 +226,7 @@ def get_df_timeseries(
     resample=None,
     sum_by="nodes",
 ):
-    results = model_container.model._model_data
+    results = model_container.combined_data
 
     if variable == "flow*":
         da = results.flow_out.fillna(0) - results.flow_in.fillna(0)
@@ -244,7 +250,7 @@ def get_df_timeseries(
 
 
 def get_generic_df(model_container, variable, dropna=False, **selectors):
-    da = model_container.model._model_data[variable]
+    da = model_container.combined_data[variable]
 
     df = da.sel(filter_selectors(da, selectors)).to_dataframe()
     if dropna:

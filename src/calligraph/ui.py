@@ -59,9 +59,7 @@ class UIView:
 
         if members is None:
             coord_members = (
-                self.model_container.model._model_data.coords[coord]
-                .to_index()
-                .to_list()
+                self.model_container.combined_data.coords[coord].to_index().to_list()
             )
         else:
             coord_members = members
